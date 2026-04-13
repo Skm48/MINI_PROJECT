@@ -1,0 +1,29 @@
+# Data (too large for GitHub)
+data/chest_xray/
+data/*.zip
+data/split_indices.csv
+
+# Model checkpoints
+models/checkpoints/*.pth
+models/checkpoints/*.pt
+
+# MLflow artifacts (track config, not runs)
+mlruns/
+
+# Colab / Jupyter
+.ipynb_checkpoints/
+*.pyc
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.egg-info/
+dist/
+build/
+
+# Large outputs (keep figures + gradcam in repo)
+outputs/metrics/*.json

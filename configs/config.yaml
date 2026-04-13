@@ -1,0 +1,64 @@
+# Project configuration
+# All hyperparameters and paths in one place
+
+data:
+  raw_dir: "data/chest_xray"
+  split_ratios: [0.8, 0.1, 0.1]
+  random_seed: 42
+  num_workers: 2  # Colab has 2 CPU cores
+
+preprocessing:
+  image_size: 224
+  imagenet_mean: [0.485, 0.456, 0.406]
+  imagenet_std: [0.229, 0.224, 0.225]
+  augmentation:
+    horizontal_flip: true
+    rotation_degrees: 10
+    brightness: 0.2
+    contrast: 0.2
+
+training:
+  batch_size: 32
+  epochs_frozen: 10       # Phase 1: frozen backbone
+  epochs_finetune: 10     # Phase 2: unfreeze last block
+  learning_rate_frozen: 1.0e-3
+  learning_rate_finetune: 1.0e-5
+  weight_decay: 1.0e-4
+  early_stopping_patience: 5
+  scheduler: "ReduceLROnPlateau"
+  scheduler_patience: 3
+  scheduler_factor: 0.5
+
+models:
+  - name: "vgg16"
+    finetune_from: "features.24"    # last conv block
+  - name: "resnet50"
+    finetune_from: "layer4"
+  - name: "efficientnet_b0"
+    finetune_from: "features.7"     # last MBConv block
+
+fusion:
+  hidden_dim: 256
+  dropout: 0.5
+  epochs: 15
+  learning_rate: 1.0e-3
+
+explainability:
+  gradcam_layer:
+    vgg16: "features.29"            # last ReLU
+    resnet50: "layer4.2.conv3"
+    efficientnet_b0: "features.8.0"
+  num_samples: 20                   # images to visualise
+
+paths:
+  checkpoints: "models/checkpoints"
+  figures: "outputs/figures"
+  gradcam: "outputs/gradcam"
+  metrics: "outputs/metrics"
+  mlflow_uri: "mlruns"
+
+experiment:
+  name: "hybrid-cnn-pneumonia"
+  tags:
+    project: "portfolio"
+    dataset: "kermany-chest-xray"
