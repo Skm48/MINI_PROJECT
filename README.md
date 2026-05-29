@@ -78,9 +78,9 @@ Project workflow
 
 1. Download dataset— Kaggle API or manual download; verify image count and folder layout
 
-2. Repository & preprocessing (merge--re-split--preprocessing) — merge train/val, 80/10/10 stratified split, torchvision transforms, class weights, DataLoaders
+2. Repository & preprocessing (merge-re-split-preprocessing) — merge train/val, 80/10/10 stratified split, torchvision transforms, class weights, DataLoaders
 
-3. EDA — 
+3. EDA — Class distribution, Sample visualisation, Width vs height scatter, Pixel intensity histogram. 
 
 4. EDA — pipeline sanity check (6-eda--pipeline-sanity-check-24) — batch shape, pixel range, augmentation preview
 
@@ -124,7 +124,7 @@ Data Loaders: batch size 32, shuffle on train only. Split indices saved to data/
 ### 3.a EDA — Class distribution (2.1)
 
 
-! [Class distribution across splits] (outputs/figures/class_distribution.png)
+![Class distribution across splits] (outputs/figures/class_distribution.png)
 
 
 Bar charts show Normal vs. Pneumonia counts for train, val, and test. Pneumonia dominates every split, with an overall ratio of about 2.88: 1, matching the literature for this dataset. After the stratified re-split, the relative proportions stay similar across splits (train ~26% Normal, val/test slightly higher Normal share because test was fixed). This confirms stratification worked and justifies inverse-frequency class weights during training, so the model does not ignore the minority class.
@@ -133,7 +133,7 @@ Bar charts show Normal vs. Pneumonia counts for train, val, and test. Pneumonia 
 ### 3.b EDA — Sample visualisation (2.2)
 
 
-! [Sample chest X-rays — Normal vs Pneumonia] (outputs/figures/sample_images.png)
+![Sample chest X-rays — Normal vs Pneumonia] (outputs/figures/sample_images.png)
 
 
 A 4*4 grid of random samples contrasts Normal and Pneumonia cases side by side. Pneumonia images often show increased opacity / consolidation in one or both lung fields, while Normal scans appear clearer with visible rib and diaphragm outlines. No
@@ -143,10 +143,10 @@ obviously blank or corrupt files were seen in the sampled grid. Visual differenc
 ### 3.c EDA — Width vs height scatter (2.3)
 
 
-! [Image resolution and intensity statistics] (outputs/figures/image_statistics.png)
+![Image resolution and intensity statistics] (outputs/figures/image_statistics.png)
 
 
-! [Width vs height scatter](outputs/figures/width_vs_height_scatter.png)
+![Width vs height scatter](outputs/figures/width_vs_height_scatter.png)
 
 
 Raw image resolutions vary considerably across the dataset. Pneumonia images cluster at lower resolutions (400–1,200px), while Normal images span a wider 
@@ -155,7 +155,7 @@ range up to ~2,800px. This resolution gap likely reflects differences in acquisi
 
 ### 3.c EDA — Pixel intensity histogram (2.4)
 
-! [Pixel intensity histogram](outputs/figures/Pixel_intensity_histogram.png)
+![Pixel intensity histogram](outputs/figures/Pixel_intensity_histogram.png)
 
 Raw image resolutions vary widely across the dataset, reflecting scans from different paediatric equipment. All images are resized to 224×224 prior to 
 model input. X-rays are single-channel grayscale but are loaded as 3-channel RGB by replicating values across channels, consistent with ImageNet-pretrained 
@@ -172,7 +172,7 @@ These observations motivated a fixed resize combined with ImageNet mean/std norm
 ### 4. EDA — Pipeline sanity check (2.5)
 
 
-! [Augmented training samples] (outputs/figures/augmented_samples.png)
+![Augmented training samples] (outputs/figures/augmented_samples.png)
 
 
 One training batch was loaded and inspected programmatically:
