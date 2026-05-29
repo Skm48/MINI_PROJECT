@@ -1,10 +1,27 @@
 # Hybrid CNN Fusion for Pneumonia Detection
 
-Multi-architecture deep learning pipeline for pneumonia detection from chest X-rays, with feature-level fusion and Grad-CAM explainability analysis.
+Multi-architecture deep learning pipeline for binary chest X-ray classification (Normal vs. Pneumonia), built on the [Chest X-Ray Images (Pneumonia)] (https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia) dataset.
+This README documents the data setup, EDA, baseline models and fusion model and their performances.
+Motivation
 
-## Overview
+## Motivation
+Pneumonia is a leading cause of childhood mortality worldwide, and chest X-rays are one of the most common first-line diagnostic tools.
+Manual reading is time-consuming and can vary between radiologists, especially under heavy clinical load.
+Automated screening models can act as a decision-support tool: flagging likely pneumonia cases for urgent review while routing clearly normal scans faster.
 
-This project evaluates three CNN architectures (VGG16, ResNet50, EfficientNet-B0) for binary pneumonia classification using transfer learning, develops a hybrid model via feature-level concatenation, and applies Grad-CAM to compare attention patterns across architectures.
+Deep learning on medical images is challenging because labelled data is limited and class distributions are often imbalanced. This project addresses that by building a reproducible data pipeline, thorough EDA, and transfer learning from ImageNet-pretrained CNNs, with inverse-frequency class weighting and stratified splits.
+
+## Objectives
+This project develops a hybrid CNN ensemble for binary pneumonia detection (Normal vs Pneumonia) from chest X-rays, with a focus on clinical reliability rather than raw accuracy alone.
+Specifically, we aim to:
+
+- Train and evaluate three CNN baselines — VGG16, ResNet50, and EfficientNet-B0 — using transfer learning from ImageNet pretrained weights.
+
+- Compare each model's performance with emphasis on Normal class recall, since misclassifying a healthy patient as Pneumonia has direct clinical consequences.
+
+- Combine all three backbones through feature-level fusion to build an ensemble that leverages complementary representations.
+
+- Apply Grad-CAM visualisation across all models to interpret where on the X-ray each model focuses, and assess whether attention aligns with clinically relevant lung regions.
 
 ## Project structure
 
@@ -14,13 +31,15 @@ hybrid-cnn-pneumonia/
 │   └── config.yaml          # All hyperparameters + paths
 ├── data/
 │   └── chest_xray/           # Kaggle dataset (not tracked)
-├── models/
+├── model/
 │   └── checkpoints/           # Saved .pth files (not tracked)
 ├── notebooks/
-│   ├── 01_setup_eda.ipynb     # Data pipeline + EDA
-│   ├── 02_baselines.ipynb     # VGG16, ResNet50, EfficientNet
-│   ├── 03_fusion.ipynb        # Feature-level fusion
-│   └── 04_gradcam.ipynb       # Explainability analysis
+│   ├── 01_setup.ipynb     # Data pipeline 
+│   ├── 02_EDA.ipynb       # EDA
+│   ├── 03_Model_****.ipynb     # VGG16, ResNet50, EfficientNet
+│   ├── 04_gradcam_***.ipynb       # Explainability analysis for VGG16, ResNet50, EfficientNet
+│   ├── 05_fusion_***.ipynb        # fusion modls
+
 ├── outputs/
 │   ├── figures/               # Training curves, comparison charts
 │   ├── gradcam/               # Heatmap visualisations
@@ -28,25 +47,151 @@ hybrid-cnn-pneumonia/
 ├── src/
 │   ├── __init__.py
 │   ├── dataset.py             # Data loading + preprocessing
-│   ├── models.py              # Baseline CNN architectures
-│   ├── train.py               # Training loop + MLflow logging
-│   ├── evaluate.py            # Metrics + confusion matrix
-│   ├── fusion.py              # Feature extraction + fusion head
-│   ├── gradcam.py             # Grad-CAM generation
-│   └── utils.py               # Config, seeds, device, helpers
 ├── mlruns/                    # MLflow tracking (not tracked)
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
-
 ## Dataset
 
-[Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia) — Kermany et al. (2018). 5,863 labelled anterior-posterior chest X-ray images from paediatric patients.
+| Item | Detail |
+|---|---|
+| Source | [Kaggle — Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia) (Kermany et al., 2018) |
+| Total images | 5,856 (after cleaning nested folders) |
+| Classes | Normal (0), Pneumonia (1) |
+| Original splits | train 5,216 · val 16 · test 624 |
+| Re-split strategy | Merged train + val → 80/10/10 stratified split; original test held out |
 
-The default validation split (16 images) is merged with training data and re-split into 80/10/10 stratified partitions.
+The original validation set (16 images) is too small for reliable evaluation, so training and validation data were re-split using stratified sampling to preserve class proportions.
 
-## Modelling
+| Split | Images | Normal | Pneumonia |
+|---|---|---|---|
+| Train | 4,650 | 1,199 | 3,451 |
+| Val | 582 | 150 | 432 |
+| Test | 624 | 234 | 390 |
+
+> **Class imbalance:** Pneumonia : Normal ≈ 2.88 : 1 across the dataset. Class-weighted loss was applied during training to mitigate bias toward the majority class.
+Project workflow
+
+
+## Project flow
+
+1. Download dataset— Kaggle API or manual download; verify image count and folder layout
+
+2. Repository & preprocessing (merge--re-split--preprocessing) — merge train/val, 80/10/10 stratified split, torchvision transforms, class weights, DataLoaders
+
+3. EDA — 
+
+4. EDA — pipeline sanity check (6-eda--pipeline-sanity-check-24) — batch shape, pixel range, augmentation preview
+
+5. Baseline models — VGG16, ResNet50, EfficientNet-B0 (transfer learning)
+
+6. Fusion + Grad-CAM (in progress on team repo) — concatenate backbone features; explain predictions
+
+### 1. Download dataset & repository setup
+
+The [Chest X-Ray Images (Pneumonia)] (https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia) dataset was downloaded (Kaggle API / zip from Drive) into data/chest_xray/ with train/, val/ and test/ subfolders per class.
+
+The team repo ([MINI_PROJECT] (https://github.com/Skm48/MINI_PROJECT)) provides:
+
+- src/ — shared dataset.py, utils.py, model helpers
+
+- configs/config.yaml — paths, batch size, augmentation, training hyperparameters
+
+- outputs/figures/ — EDA and training plots (committed to Git)
+
+- .gitignore — excludes raw data/ and large. pth checkpoints
+
+
+### 2. Merge + re-split & preprocessing
+
+The original validation set contains only 16 images — too small for reliable validation. Train and val were merged (5,232 images) and re-split with sklearn.model_selection.train_test_split (stratify=labels, random_state=42) twice to obtain 80% train / 10% val; the original test set (624 images) was kept unchanged.
+
+Preprocessing (torchvision.transforms)
+
+Step Training Val / Test
+
+Resize 224 * 224 224 * 224
+
+Augmentation Horizontal flip, ±10° rotation, brightness/contrast jitter None
+
+Normalisation ImageNet mean [0.485, 0.456, 0.406] , std [0.229, 0.224, 0.225] Same
+
+Class weights w = 1 / class_freq → Normal 1.939, Pneumonia 0.674 Used in CrossEntropyLoss
+
+Data Loaders: batch size 32, shuffle on train only. Split indices saved to data/split_indices.csv for reproducibility.
+
+### 3.a EDA — Class distribution (2.1)
+
+
+! [Class distribution across splits] (outputs/figures/class_distribution.png)
+
+
+Bar charts show Normal vs. Pneumonia counts for train, val, and test. Pneumonia dominates every split, with an overall ratio of about 2.88: 1, matching the literature for this dataset. After the stratified re-split, the relative proportions stay similar across splits (train ~26% Normal, val/test slightly higher Normal share because test was fixed). This confirms stratification worked and justifies inverse-frequency class weights during training, so the model does not ignore the minority class.
+
+
+### 3.b EDA — Sample visualisation (2.2)
+
+
+! [Sample chest X-rays — Normal vs Pneumonia] (outputs/figures/sample_images.png)
+
+
+A 4*4 grid of random samples contrasts Normal and Pneumonia cases side by side. Pneumonia images often show increased opacity / consolidation in one or both lung fields, while Normal scans appear clearer with visible rib and diaphragm outlines. No
+
+obviously blank or corrupt files were seen in the sampled grid. Visual differences are subtle in some cases, which explains why high accuracy alone is insufficient — clinical review and explainability (Grad-CAM) matter.
+
+### 3.c EDA — Width vs height scatter (2.3)
+
+
+! [Image resolution and intensity statistics] (outputs/figures/image_statistics.png)
+
+
+! [Width vs height scatter](outputs/figures/width_vs_height_scatter.png)
+
+
+Raw image resolutions vary considerably across the dataset. Pneumonia images cluster at lower resolutions (400–1,200px), while Normal images span a wider 
+range up to ~2,800px. This resolution gap likely reflects differences in acquisition source rather than clinical content. All images are resized to 
+224×224 during preprocessing, so resolution does not directly influence model training — however it represents a potential dataset bias worth acknowledging.
+
+### 3.c EDA — Pixel intensity histogram (2.4)
+
+! [Pixel intensity histogram](outputs/figures/Pixel_intensity_histogram.png)
+
+Raw image resolutions vary widely across the dataset, reflecting scans from different paediatric equipment. All images are resized to 224×224 prior to 
+model input. X-rays are single-channel grayscale but are loaded as 3-channel RGB by replicating values across channels, consistent with ImageNet-pretrained 
+backbone requirements.
+
+Pixel intensity distributions (train set) show both classes share a dominant zero-intensity spike from background regions, with Normal cases showing 
+proportionally more black background area. Pneumonia cases exhibit a heavier right tail (intensities 100–220), consistent with consolidation and infiltrates 
+appearing as brighter opacities on the lung fields. The distributions overlap substantially but are distinguishable; intensity alone is insufficient for reliable classification. Pneumonia detection requires identifying *where* 
+opacities appear on the lung field, not just *how bright* the image is overall. This spatial dependency makes CNNs the natural choice, as convolutional layers 
+learn localised hierarchical features directly from image structure rather than relying on global statistics.
+
+These observations motivated a fixed resize combined with ImageNet mean/std normalisation as the preprocessing standard across all three models.
+
+### 4. EDA — Pipeline sanity check (2.5)
+
+
+! [Augmented training samples] (outputs/figures/augmented_samples.png)
+
+
+One training batch was loaded and inspected programmatically:
+
+
+Check Result
+
+Tensor shape [32, 3, 224, 224]
+
+Labels {0, 1} — Normal / Pneumonia
+
+Pixel range (after normalise) approx. [-2.12, 2.64]
+
+Augmentation Flip / rotation / colour jitter visible on train only
+
+
+The data loader, label mapping, and transforms are wired correctly before any model training. Augmentations increase diversity without changing val/test pipelines, which keeps evaluation fair.
+
+### 5. Modelling
 
 ### VGG16 Architecture and Training Strategy
 
@@ -117,6 +262,46 @@ In the second phase, Block 5 (the final convolutional block) was unfrozen to all
 
 This result suggests that ImageNet features transfer sufficiently well to the chest X-ray domain that fine-tuning the final convolutional block provides no additional benefit for this dataset. 
 Similar findings have been reported in prior medical imaging transfer learning studies (Tajbakhsh et al., 2016).
+
+### ResNet50
+
+ResNet50's skip connections ease optimisation of deep networks, and its 2048-d global average pooling vector makes it well suited to transfer 
+learning on 224×224 inputs.
+
+#### Architecture
+
+ResNet50 has ~25M parameters and uses Bottleneck blocks (1×1 → 3×3 → 1×1 convolutions) with residual shortcuts.
+
+| Stage | Blocks | Role | Training |
+|---|---|---|---|
+| conv1 + maxpool | — | 224→56 spatial downsampling | Frozen |
+| layer1 | 3 | Low-level edges / textures | Frozen |
+| layer2 | 4 | Mid-level structures | Frozen |
+| layer3 | 6 | High-level patterns | Frozen |
+| layer4 | 3 | Deepest semantic features | Fine-tuned |
+| avgpool | — | 2048-d global vector | — |
+| Head | — | Dropout(0.4) → Linear(2048→2) | Trained |
+
+**Forward path:**
+Input (224×224×3) → conv1/maxpool → layer1–3 [frozen] → layer4 [fine-tuned]
+→ avgpool (2048-d) → Dropout(0.4) → Linear → 2 logits
+
+#### Training Setup
+
+Weights initialised from ImageNet (`IMAGENET1K_V1`). Low- and mid-level 
+filters transfer well to thoracic imaging; only layer4 and the classifier 
+head were optimised.
+
+| Parameter | Value |
+|---|---|
+| Loss | CrossEntropyLoss with inverse-frequency class weights |
+| Optimiser | Adam — layer4 lr=1e-4, classifier lr=1e-3 |
+| Scheduler | ReduceLROnPlateau (monitor: val accuracy, patience=2) |
+| Early stopping | Patience=4 on val accuracy |
+| Max epochs | 12 |
+| Batch size | 32 |
+| Best checkpoint | `model/checkpoints/resnet50_best.pth` |
+
 
 
 ### Fusion Model Architecture and Training Strategy
