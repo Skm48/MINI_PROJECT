@@ -124,7 +124,7 @@ Data Loaders: batch size 32, shuffle on train only. Split indices saved to data/
 ### 3.a EDA — Class distribution (2.1)
 
 
-![Class distribution across splits] (outputs/figures/class_distribution.png)
+![Class distribution across splits](outputs/figures/class_distribution.png)
 
 
 Bar charts show Normal vs. Pneumonia counts for train, val, and test. Pneumonia dominates every split, with an overall ratio of about 2.88: 1, matching the literature for this dataset. After the stratified re-split, the relative proportions stay similar across splits (train ~26% Normal, val/test slightly higher Normal share because test was fixed). This confirms stratification worked and justifies inverse-frequency class weights during training, so the model does not ignore the minority class.
@@ -133,8 +133,7 @@ Bar charts show Normal vs. Pneumonia counts for train, val, and test. Pneumonia 
 ### 3.b EDA — Sample visualisation (2.2)
 
 
-![Sample chest X-rays — Normal vs Pneumonia] (outputs/figures/sample_images.png)
-
+![Sample chest X-rays — Normal vs Pneumonia](outputs/figures/sample_images.png)
 
 A 4*4 grid of random samples contrasts Normal and Pneumonia cases side by side. Pneumonia images often show increased opacity / consolidation in one or both lung fields, while Normal scans appear clearer with visible rib and diaphragm outlines. No
 
@@ -142,11 +141,7 @@ obviously blank or corrupt files were seen in the sampled grid. Visual differenc
 
 ### 3.c EDA — Width vs height scatter (2.3)
 
-
-![Image resolution and intensity statistics] (outputs/figures/image_statistics.png)
-
-
-![Width vs height scatter](outputs/figures/width_vs_height_scatter.png)
+![Width vs height scatter](outputs/figures/width_vs_height_all.png)
 
 
 Raw image resolutions vary considerably across the dataset. Pneumonia images cluster at lower resolutions (400–1,200px), while Normal images span a wider 
@@ -172,7 +167,7 @@ These observations motivated a fixed resize combined with ImageNet mean/std norm
 ### 4. EDA — Pipeline sanity check (2.5)
 
 
-![Augmented training samples] (outputs/figures/augmented_samples.png)
+![Augmented training samples](outputs/figures/augmented_samples.png)
 
 
 One training batch was loaded and inspected programmatically:
