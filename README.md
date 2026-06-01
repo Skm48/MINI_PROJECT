@@ -297,7 +297,44 @@ head were optimised.
 | Batch size | 32 |
 | Best checkpoint | `model/checkpoints/resnet50_best.pth` |
 
+### EfficientNet-B0
 
+EfficientNet-B0 is a lightweight convolutional network built around 
+compound scaling — balancing depth, width, and input resolution 
+simultaneously rather than independently. Its core building blocks are 
+Mobile Inverted Bottleneck Convolutions (MBConv) with Squeeze-and-Excitation 
+(SE) attention, which recalibrate channel-wise feature responses adaptively.
+
+#### Architecture
+
+| Stage | Block | Output Channels | Repeats |
+|---|---|---|---|
+| 1 | MBConv1 | 16 | 1 |
+| 2 | MBConv6 | 24 | 2 |
+| 3 | MBConv6 | 40 | 2 |
+| 4 | MBConv6 | 80 | 3 |
+| 5 | MBConv6 | 112 | 3 |
+| 6 | MBConv6 | 192 | 4 |
+| 7 | MBConv6 | 320 | 1 |
+
+The default classifier is replaced with a two-layer head adding capacity 
+for domain-specific feature combination before the binary output.
+
+**Forward path:**
+
+Input (224×224×3) → features[0–7] [frozen in P1] → features[-3:] [fine-tuned in P2]
+→ avgpool (1280-d) → Linear(1280→256) → ReLU → Dropout(0.5) → Linear(256→2) → 2 logits
+
+### Training Setup
+
+| Parameter | Phase 1 | Phase 2 |
+|---|---|---|
+| Trainable | Classifier head only | features[-3:] + head |
+| Optimiser | Adam lr=1e-3, wd=1e-4 | Adam lr=1e-5, wd=1e-4 (single LR) |
+| Scheduler | ReduceLROnPlateau (val loss, patience=3, factor=0.5) | Same |
+| Early stopping | Patience=4 on val accuracy | Patience=4 on val accuracy |
+| Loss | CrossEntropyLoss with inverse-frequency class weights | Same |
+| Checkpoint | `best_model_frozen.pth` | `model/checkpoints/efficientnet_b0_best.pth` |
 
 ### Fusion Model Architecture and Training Strategy
 
@@ -367,14 +404,45 @@ The fusion classifier was trained on pre-extracted features, making training com
 
 Training converged within approximately 15 epochs. The best model was selected based on minimum validation loss.
 
+## Explainable AI (Grad-CAM)
 
-## Tech stack
+Pneumonia causes inflammation in one or both lungs, and understanding how a 
+model makes decisions is as important as what it predicts. Grad-CAM was 
+applied to VGG16, ResNet50, and EfficientNet-B0 to visualise the regions of 
+each chest X-ray that contributed most strongly to the model's output.
 
-- **Framework:** PyTorch + torchvision
-- **Models:** VGG16, ResNet50, EfficientNet-B0 (ImageNet pretrained)
-- **Explainability:** pytorch-grad-cam
-- **Tracking:** MLflow
-- **Evaluation:** scikit-learn
+Heatmaps were analysed across four prediction outcomes:
+
+| Case | Description |
+|---|---|
+| True Positive (TP) | Pneumonia correctly identified |
+| False Positive (FP) | Normal misclassified as Pneumonia |
+| False Negative (FN) | Pneumonia missed |
+| True Negative (TN) | Normal correctly identified |
+
+![VGG16 Grad-CAM](outputs/figures/vgg16_comparison_grid.png)
+![ResNet50 Grad-CAM](outputs/figures/resnet50_comparison_grid.png)
+![EfficientNet-B0 Grad-CAM](outputs/figures/efficientnet_b0_comparison_grid.png)
+
+### Model-by-Model Comparison
+
+| Aspect | VGG16 | ResNet50 | EfficientNet-B0 |
+|---|---|---|---|
+| Attention quality | Shallow, inconsistent; edge-focused | Structured; better localisation | Most stable and context-aware |
+| True positives | Good on obvious cases | Broad diffuse activation; correct region but lacks focused localisation | Best alignment with pathology |
+| False positives | High; distracted by ribs/markers | Moderate | Lowest FP tendency |
+| False negatives | High; misses subtle cases | Moderate | Lowest FN rate |
+| Artefact sensitivity | Very high | Moderate | Low |
+| Interpretability | Clear but simplistic | Strong and stable | Most clinically meaningful |
+| Overall reliability | Lowest | Good | Highest |
+
+Grad-CAM results varied across images for all models, confirming that 
+attention maps are image-dependent. When TP/FP/FN/TN examples were swapped, 
+the highlighted regions shifted accordingly. This is expected because 
+pneumonia can appear in different lung regions, and each architecture extracts 
+features differently. EfficientNet-B0 remained the most consistent across 
+multiple images.
+
 
 ## Results
 
@@ -386,6 +454,15 @@ Training converged within approximately 15 epochs. The best model was selected b
 | ResNet50 | — | — | — | — | — |
 | EfficientNet-B0 | — | — | — | — | — |
 | **Fusion** | — | — | — | — | — |
+
+## Tech stack
+
+- **Framework:** PyTorch + torchvision
+- **Models:** VGG16, ResNet50, EfficientNet-B0 (ImageNet pretrained)
+- **Explainability:** pytorch-grad-cam
+- **Tracking:** MLflow
+- **Evaluation:** scikit-learn
+
 
 ## References
 
