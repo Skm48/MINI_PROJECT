@@ -253,7 +253,7 @@ In the second phase, Block 5 (the final convolutional block) was unfrozen to all
 | Learning rate | 1 × 10⁻⁶ |
 | All other hyperparameters | As Phase 1 |
 
-**Outcome:** Fine-tuning did not yield improvement over Phase 1. Test accuracy decreased marginally (from 84.6% to 85.9% accuracy), with Normal class recall declining from 0.68 to 0.65. The Phase 1 frozen model was therefore retained as the final VGG16 model.
+**Outcome:** Fine-tuning did not yield improvement over Phase 1. Test accuracy decreased marginally (from 89% to 85% accuracy). The Phase 1 frozen model was therefore retained as the final VGG16 model.
 
 This result suggests that ImageNet features transfer sufficiently well to the chest X-ray domain that fine-tuning the final convolutional block provides no additional benefit for this dataset. 
 Similar findings have been reported in prior medical imaging transfer learning studies (Tajbakhsh et al., 2016).
@@ -380,11 +380,15 @@ The fusion classifier is a fully connected neural network trained on the concate
 
 | Layer | Input Dim | Output Dim | Activation | Description |
 |-------|-----------|------------|------------|-------------|
-| Dense | 3,840 | 512 | ReLU | Feature compression |
-| Dropout | 512 | 512 | — | 50% dropout for regularisation |
-| Dense | 512 | 128 | ReLU | Further compression |
-| Dropout | 128 | 128 | — | 30% dropout |
-| Dense | 128 | 2 | — | Output scores for Normal / Pneumonia |
+| Dense       | 3,840 | 256 | ReLU | Feature compression |
+| BatchNorm1d | 256   | 256 | —    | Stabilises training, regularises |
+| Dropout     | 256   | 256 | —    | 60% dropout |
+| Dense       | 256   | 64  | ReLU | Further compression |
+| BatchNorm1d | 64    | 64  | —    | Stabilises training, regularises |
+| Dropout     | 64    | 64  | —    | 40% dropout |
+| Dense       | 64    | 2   | —    | Output scores for Normal / Pneumonia |
+
+Total trainable parameters: approximately 1.0M (fusion head only; backbone weights are frozen).
 
 Total trainable parameters: approximately 2.0M (fusion head only; backbone weights are frozen).
 
