@@ -420,11 +420,11 @@ Heatmaps were analysed across four prediction outcomes:
 | False Negative (FN) | Pneumonia missed |
 | True Negative (TN) | Normal correctly identified |
 
-![VGG16 Grad-CAM](outputs/figures/vgg16_comparison_grid.png)
+![VGG16 Grad-CAM](outputs/gradcam/vgg16_comparison_grid.png)
 
-![ResNet50 Grad-CAM](outputs/figures/resnet50_comparison_grid.png)
+![ResNet50 Grad-CAM](outputs/gradcam/resnet50_comparison_grid.png)
 
-![EfficientNet-B0 Grad-CAM](outputs/figures/efficientnet_b0_comparison_grid.png)
+![EfficientNet-B0 Grad-CAM](outputs/gradcam/efficientnet_b0_comparison_grid.png)
 
 ### Model-by-Model Comparison
 
