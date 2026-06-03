@@ -421,7 +421,9 @@ Heatmaps were analysed across four prediction outcomes:
 | True Negative (TN) | Normal correctly identified |
 
 ![VGG16 Grad-CAM](outputs/figures/vgg16_comparison_grid.png)
+
 ![ResNet50 Grad-CAM](outputs/figures/resnet50_comparison_grid.png)
+
 ![EfficientNet-B0 Grad-CAM](outputs/figures/efficientnet_b0_comparison_grid.png)
 
 ### Model-by-Model Comparison
@@ -444,16 +446,67 @@ features differently. EfficientNet-B0 remained the most consistent across
 multiple images.
 
 
-## Results
+## Results and Comparision
 
-*To be updated after training.*
+![fusion_model_comparison](outputs/figures/fusion_model_comparison.png)
 
-| Model | Accuracy | Precision | Recall | F1 | AUC-ROC |
-|-------|----------|-----------|--------|-----|---------|
-| VGG16 | — | — | — | — | — |
-| ResNet50 | — | — | — | — | — |
-| EfficientNet-B0 | — | — | — | — | — |
-| **Fusion** | — | — | — | — | — |
+The three baseline CNNs showed distinct behaviours:
+
+· VGG16: Sensitive to strong pneumonia patterns but highly affected by artefacts and inconsistent attention.
+
+· ResNet50: Better localisation and higher precision but occasionally missed subtle pneumonia.
+
+· EfficientNet-B0: Strongest standalone model with the highest recall, F1-score, and accuracy. Its Grad-CAM maps were the most clinically aligned and stable.
+
+High recall is especially important in pneumonia detection because missing a positive case poses significant clinical risk.
+Efficient Net-B0’s strong recall and robust attention patterns make it the most reliable individual model.
+
+Two fusion strategies were evaluated against the individual backbones: feature-level fusion (concatenating intermediate feature representations into a single classifier) and score-level fusion (averaging the models' output probabilities).
+
+Feature fusion achieved the highest accuracy of all approaches at 0.89, a marginal improvement over the strongest individual model, EfficientNet-B0 (0.88). Its F1-score (0.88) matched EfficientNet-B0 rather than exceeding it.
+Notably, this accuracy gain did not extend to ranking quality: feature fusion recorded the lowest AUC of all five models (0.95), slightly below every individual backbone. This suggests that combining and re-learning from the concatenated features sharpened the decision boundary at the default threshold, but did not improve the model's underlying ability to separate cases — likely because the three backbones make largely correlated errors on the genuinely ambiguous X-rays.
+
+Score fusion preserved strong ranking performance, tying for the highest AUC (0.97), but did not improve thresholded accuracy (0.86) or F1 (0.85) over the best individual model. The fixed equal-weight averaging appears to have been suboptimal at the 0.5 decision threshold.
+
+Overall, fusion produced a small, metric-dependent improvement rather than a decisive gain across all metrics. The limited benefit is consistent with the individual models already performing strongly (AUC 0.95–0.97) and making overlapping mistakes, leaving little complementary signal for fusion to exploit. 
+EfficientNet-B0 remains the most balanced single model, and feature fusion offers a modest accuracy advantage where maximising correct classifications at a fixed threshold is the priority.
+
+
+| Model | Accuracy | F1 | AUC-ROC |
+|-------|----------|----|---------|
+| VGG16 |   0.85 |   0.84 |   0.96 |
+| ResNet50 |   0.87 |   0.86 |   0.97 |
+| EfficientNet-B0 |   0.88 |   0.88 |   0.96 |
+| **Fusion** |   0.89 |  0.88 |   0.95 |
+
+## Conclusion
+EfficientNet-B0 emerged as the strongest individual model, offering the best balance of accuracy, recall, and clinically meaningful Grad-CAM attention. 
+Feature-level fusion achieved the highest accuracy overall (0.89), a marginal gain over EfficientNet-B0 (0.88), with a comparable F1-score.
+This improvement did not extend to AUC, where feature fusion scored slightly lower than every individual model — indicating that fusion sharpened classification at the chosen threshold rather than improving the underlying separation of cases. 
+The modest gains are consistent with three already-strong backbones that make largely overlapping errors, leaving limited complementary signal to exploit.
+The trade-off is computational cost: fusion requires running all three models and training an additional classifier, making EfficientNet-B0 the more practical choice when resources or time are limited. Feature fusion offers a small accuracy advantage where maximising correct classifications at a fixed threshold is the priority, but it does not provide a decisive improvement across all metrics.
+
+## Limitations
+
+· Computational cost: Fusion requires extracting features from three CNNs, increasing training and inference time.
+
+· Dataset bias: Pneumonia dominates the dataset (≈2.9:1), and images come from mixed acquisition sources.
+
+· Generalisation: Models were trained on a single dataset; external validation is needed.
+
+· Explainability variability: Grad-CAM attention shifts depending on the specific X-ray.
+
+## Future Work
+
+· Evaluate on external datasets (NIH, CheXpert, RSNA).
+
+· Explore lighter fusion strategies (e.g., weighted score-level ensembling).
+
+· Investigate attention-based architectures (Vision Transformers, ConvNeXt).
+
+· Apply lung segmentation to reduce artefact sensitivity.
+
+· Develop a clinical decision-support prototype with uncertainty estimation.
 
 ## Tech stack
 
